@@ -1,10 +1,12 @@
 namespace ZRadio;
 
-internal static class Program
+internal class Program
 {
-    [STAThread]
-    static void Main()
+    private static async Task Main()
     {
+        _ = Server.Redirect();
+        await Client.RequestAuthAsync();
+        await Client.RequestAccessTokenAsync(Server.State, Server.Code);
         Application.Run();
     }
 }
