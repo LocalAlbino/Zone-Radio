@@ -6,8 +6,8 @@ namespace ZRadio;
 internal static class Server
 {
     public static string RedirectUri { get; } = "http://127.0.0.1:8888/callback/";
-    public static string? State { get; set; }
-    public static string? Code { get; set; }
+    public static string? State { get; private set; }
+    public static string? Code { get; private set; }
 
     public static async Task Redirect()
     {

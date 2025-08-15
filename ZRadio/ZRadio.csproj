@@ -11,5 +11,6 @@
     <ItemGroup>
         <PackageReference Include="DotNetEnv" Version="3.1.1"/>
         <None Update=".env" CopyToOutputDirectory="Always"/>
+        <PackageReference Include="SharpHook" Version="7.0.0"/>
     </ItemGroup>
 </Project>
