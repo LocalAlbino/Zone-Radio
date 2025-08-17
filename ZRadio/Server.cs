@@ -35,9 +35,4 @@ internal static class Server
 
         Listener.Stop();
     }
-
-    private static bool IsCodeOrStateNull()
-    {
-        return Code == null || State == null;
-    }
 }
