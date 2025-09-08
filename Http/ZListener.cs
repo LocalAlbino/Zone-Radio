@@ -6,6 +6,7 @@ namespace Zone_Radio.Http
     internal class ZListener
     {
         private HttpListener _listener;
+        public TaskCompletionSource<bool> Ready { get; private set; }
         public string RedirectUri { get; }
         public string Code { get; private set; }
         public string State { get; private set; }
@@ -14,6 +15,7 @@ namespace Zone_Radio.Http
         {
             _listener = new HttpListener();
             RedirectUri = redirectUri;
+            Ready = new TaskCompletionSource<bool>(false);
         }
 
         public void Start()
@@ -24,19 +26,20 @@ namespace Zone_Radio.Http
 
         public void Stop()
         {
-            if (IsLIstening()) _listener.Stop();
+            if (IsListening()) _listener.Stop();
         }
 
-        public bool IsLIstening()
+        public bool IsListening()
         {
             return _listener.IsListening;
         }
 
-        public void Redirect()
+        public async Task RedirectAsync()
         {
-            if (!IsLIstening()) return;
+            if (!IsListening()) return;
 
-            var ctx = _listener.GetContext();
+            Ready.TrySetResult(true); // Let client know we are ready to accept a connection
+            var ctx = await _listener.GetContextAsync();
             Code = ctx.Request.QueryString["code"];
             State = ctx.Request.QueryString["state"];
 

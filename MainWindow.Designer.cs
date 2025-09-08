@@ -39,6 +39,8 @@
             cboxTogglePda2 = new ComboBox();
             lblConnectionStatus = new Label();
             btnConnect = new Button();
+            ckboxPdaStatus = new CheckBox();
+            lblRefreshTimer = new Label();
             SuspendLayout();
             // 
             // cboxTogglePlayback1
@@ -48,6 +50,7 @@
             cboxTogglePlayback1.Name = "cboxTogglePlayback1";
             cboxTogglePlayback1.Size = new Size(171, 23);
             cboxTogglePlayback1.TabIndex = 0;
+            cboxTogglePlayback1.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // lblTogglePLayback
             // 
@@ -65,6 +68,7 @@
             cboxTogglePlayback2.Name = "cboxTogglePlayback2";
             cboxTogglePlayback2.Size = new Size(171, 23);
             cboxTogglePlayback2.TabIndex = 2;
+            cboxTogglePlayback2.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // lblSkipPlayback
             // 
@@ -82,6 +86,7 @@
             cboxSkipPlayback1.Name = "cboxSkipPlayback1";
             cboxSkipPlayback1.Size = new Size(171, 23);
             cboxSkipPlayback1.TabIndex = 4;
+            cboxSkipPlayback1.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // cboxSkipPlayback2
             // 
@@ -90,6 +95,7 @@
             cboxSkipPlayback2.Name = "cboxSkipPlayback2";
             cboxSkipPlayback2.Size = new Size(171, 23);
             cboxSkipPlayback2.TabIndex = 5;
+            cboxSkipPlayback2.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // lblTogglePda
             // 
@@ -107,6 +113,7 @@
             cboxTogglePda1.Name = "cboxTogglePda1";
             cboxTogglePda1.Size = new Size(171, 23);
             cboxTogglePda1.TabIndex = 7;
+            cboxTogglePda1.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // cboxTogglePda2
             // 
@@ -115,6 +122,7 @@
             cboxTogglePda2.Name = "cboxTogglePda2";
             cboxTogglePda2.Size = new Size(171, 23);
             cboxTogglePda2.TabIndex = 8;
+            cboxTogglePda2.SelectionChangeCommitted += ComboBox_SelectionChangesCommitted;
             // 
             // lblConnectionStatus
             // 
@@ -134,11 +142,33 @@
             btnConnect.UseVisualStyleBackColor = true;
             btnConnect.Click += btnConnect_Click;
             // 
+            // ckboxPdaStatus
+            // 
+            ckboxPdaStatus.AutoSize = true;
+            ckboxPdaStatus.Enabled = false;
+            ckboxPdaStatus.Location = new Point(12, 129);
+            ckboxPdaStatus.Name = "ckboxPdaStatus";
+            ckboxPdaStatus.Size = new Size(84, 19);
+            ckboxPdaStatus.TabIndex = 11;
+            ckboxPdaStatus.Text = "PDA Status";
+            ckboxPdaStatus.UseVisualStyleBackColor = true;
+            // 
+            // lblRefreshTimer
+            // 
+            lblRefreshTimer.AutoSize = true;
+            lblRefreshTimer.Location = new Point(366, 129);
+            lblRefreshTimer.Name = "lblRefreshTimer";
+            lblRefreshTimer.Size = new Size(120, 15);
+            lblRefreshTimer.TabIndex = 12;
+            lblRefreshTimer.Text = "Time Until Refresh: --";
+            // 
             // MainWindow
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(554, 124);
+            ClientSize = new Size(554, 151);
+            Controls.Add(lblRefreshTimer);
+            Controls.Add(ckboxPdaStatus);
             Controls.Add(btnConnect);
             Controls.Add(lblConnectionStatus);
             Controls.Add(cboxTogglePda2);
@@ -152,6 +182,7 @@
             Controls.Add(cboxTogglePlayback1);
             Name = "MainWindow";
             Text = "Zone Radio";
+            FormClosing += MainWindow_FormClosing;
             ResumeLayout(false);
             PerformLayout();
         }
@@ -169,5 +200,7 @@
         private ComboBox cboxTogglePda2;
         private Label lblConnectionStatus;
         private Button btnConnect;
+        private CheckBox ckboxPdaStatus;
+        private Label lblRefreshTimer;
     }
 }
