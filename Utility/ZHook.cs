@@ -1,5 +1,7 @@
-﻿using SharpHook;
+﻿using DotNetEnv;
+using SharpHook;
 using SharpHook.Data;
+using Zone_Radio.Http;
 
 namespace Zone_Radio.Utility
 {
@@ -33,8 +35,23 @@ namespace Zone_Radio.Utility
 
         public void UpdateKeybind(object parent, KeyCode keyCode)
         {
-            foreach (var pair in _keybinds)
+
+        }
+
+        // Action to toggle playback that can be assigned to a keybind
+        public async Task TogglePlaybackAsync()
+        {
+            try
             {
+                Env.TraversePath().Load();
+                string clientId = Env.GetString("CLIENT_ID");
+                string clientSecret = Env.GetString("CLIENT_ID");
+                var client = new ZClient(clientId, clientSecret);
+                await client.TogglePlaybackAsync();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error toggling playback: {e.Message}");
             }
         }
 

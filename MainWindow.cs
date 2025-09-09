@@ -1,5 +1,4 @@
-﻿using DotNetEnv;
-using SharpHook.Data;
+﻿using SharpHook.Data;
 using Zone_Radio.Http;
 using Zone_Radio.Utility;
 
@@ -7,7 +6,6 @@ namespace Zone_Radio
 {
     public partial class MainWindow : Form
     {
-        private ZClient _client;
         private ZListener _listener;
         private ZHook _hook;
 
@@ -41,31 +39,29 @@ namespace Zone_Radio
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             lblConnectionStatus.Text = "Connecting to Spotify API.";
-            await Connect();
+            await ConnectAsync();
         }
 
-        private async Task Connect()
+        private async Task ConnectAsync()
         {
-            Env.TraversePath().Load();
-            string clientId = Env.GetString("CLIENT_ID");
-            string clientSecret = Env.GetString("CLIENT_SECRET");
-            if (string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(clientId))
-            {
-                lblConnectionStatus.Text = "Failed to connect to Spotify API.";
-                await ConnectDebounce();
-                return; // Cannot continue if these values aren't both valid
-            }
-
-            _client = new ZClient(clientId, clientSecret);
+            var env = new ZEnv();
+            var client = new ZClient(env.ClientId, env.ClientSecret);
             try
             {
                 _listener.Start();
                 _ = _listener.RedirectAsync(); // Start listening
                 await _listener.Ready.Task; // Wait until listener is ready
-                await _client.RequestAuthorizationAsync(_listener.RedirectUri);
+                await client.RequestAuthorizationAsync(_listener.RedirectUri);
                 // Initial request called once, needs refreshed every hour
-                await _client.RequestAccessTokenAsync(_listener.State, _listener.Code, clientId, clientSecret,
+                await client.RequestAccessTokenAsync(_listener.State, _listener.Code,
                     _listener.RedirectUri);
+                bool hasPremium = await client.RequestUserProductAsync(); // Ensure that the user has a premium account
+                if (!hasPremium)
+                {
+                    MessageBox.Show("You must have a premium subscription for Zone Radio to work. Sorry!",
+                        "Premium Required!", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    Close(); // User cannot use the app without premium, so exit
+                }
 
                 // Update ui
                 btnConnect.Enabled = false;
@@ -77,11 +73,41 @@ namespace Zone_Radio
                 if (_listener.IsListening()) _listener.Stop();
 
                 lblConnectionStatus.Text = "Failed to connect to Spotify API.";
-                await ConnectDebounce();
+                await ConnectDebounceAsync();
             }
         }
 
-        private async Task ConnectDebounce()
+        private async Task TryRefreshConnectionAsync()
+        {
+            int maxRetries = 3;
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    await RefreshConnectionAsync();
+                    lblConnectionStatus.Text = "Connected to Spotify API.";
+                    return; // Exit if successful
+                }
+                catch
+                {
+                    await Task.Delay(2000);
+                }
+            }
+
+            lblConnectionStatus.Text = "Failed to refresh Spotify API connection.";
+            btnConnect.Enabled = true; // Allow user to try getting new connection
+        }
+
+        private async Task RefreshConnectionAsync()
+        {
+            var env = new ZEnv();
+            var client = new ZClient(env.ClientId, env.ClientSecret);
+
+            lblConnectionStatus.Text = "Refreshing Spotify API connection.";
+            await client.RequestRefreshTokenAsync();
+        }
+
+        private async Task ConnectDebounceAsync()
         {
             btnConnect.Enabled = false;
             await Task.Delay(2000); // Prevents spamming API requests

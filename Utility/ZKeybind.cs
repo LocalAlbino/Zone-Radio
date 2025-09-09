@@ -6,6 +6,6 @@ namespace Zone_Radio.Utility
     {
         public required object Parent { get; init; } // Typically ComboBox
         public required KeyCode Code { get; set; }
-        public required Action KeyAction { get; init; }
+        public required Func<Task> KeyAction { get; init; } // Async since these make API calls
     }
 }
