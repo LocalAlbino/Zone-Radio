@@ -156,11 +156,11 @@
             // lblRefreshTimer
             // 
             lblRefreshTimer.AutoSize = true;
-            lblRefreshTimer.Location = new Point(366, 129);
+            lblRefreshTimer.Location = new Point(404, 130);
             lblRefreshTimer.Name = "lblRefreshTimer";
-            lblRefreshTimer.Size = new Size(120, 15);
+            lblRefreshTimer.Size = new Size(133, 15);
             lblRefreshTimer.TabIndex = 12;
-            lblRefreshTimer.Text = "Time Until Refresh: --";
+            lblRefreshTimer.Text = "Time Until Refresh: --:--";
             // 
             // MainWindow
             // 

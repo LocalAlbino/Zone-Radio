@@ -8,12 +8,19 @@ namespace Zone_Radio
     {
         private ZListener _listener;
         private ZHook _hook;
+        private System.Timers.Timer _refreshTimer;
+        private System.Windows.Forms.Timer _uiTimer;
+        private int _uiTimerCurrentTime;
 
         public MainWindow()
         {
             _listener = new ZListener("http://127.0.0.1:8888/callback/");
             _hook = new ZHook();
             InitializeComponent();
+
+            _uiTimerCurrentTime = 0;
+            _uiTimer = new System.Windows.Forms.Timer(); // Connects to UI thread
+            _refreshTimer = new System.Timers.Timer(); // Connects to non-UI thread
 
             cboxTogglePlayback1.DataSource = Enum.GetValues(typeof(KeyCode));
             cboxTogglePlayback2.DataSource = Enum.GetValues(typeof(KeyCode));
@@ -36,6 +43,46 @@ namespace Zone_Radio
             lblConnectionStatus.Text = "Not connected to Spotify API.";
         }
 
+        private void InitializeRefreshTimer(int expiresIn)
+        {
+            _refreshTimer.Interval = expiresIn * 1000; // Convert seconds to milliseconds
+            _refreshTimer.Enabled = true;
+            _refreshTimer.Elapsed += async (_, _) =>
+            {
+                _refreshTimer.Enabled = false;
+                _uiTimer.Enabled = false;
+                lblRefreshTimer.Text = "Time until refresh: --:--";
+                bool reconnected = await TryRefreshConnectionAsync();
+
+                if (reconnected) // Only re-enable if successful
+                {
+                    _refreshTimer.Enabled = true;
+                }
+            };
+        }
+
+        private void InitializeUiTimer(int expiresIn)
+        {
+            _uiTimerCurrentTime = expiresIn;
+
+            _uiTimer.Interval = 1000; // 1 second
+            _uiTimer.Enabled = true;
+            _uiTimer.Tick += async (_, _) =>
+            {
+                _uiTimerCurrentTime--;
+                int minutes = _uiTimerCurrentTime / 60;
+                int seconds = _uiTimerCurrentTime % 60;
+                if (seconds < 10)
+                {
+                    lblRefreshTimer.Text = $"Time until refresh: {minutes}:0{seconds}";
+                }
+                else
+                {
+                    lblRefreshTimer.Text = $"Time until refresh: {minutes}:{seconds}";
+                }
+            };
+        }
+
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             lblConnectionStatus.Text = "Connecting to Spotify API.";
@@ -53,9 +100,11 @@ namespace Zone_Radio
                 await _listener.Ready.Task; // Wait until listener is ready
                 await client.RequestAuthorizationAsync(_listener.RedirectUri);
                 // Initial request called once, needs refreshed every hour
-                await client.RequestAccessTokenAsync(_listener.State, _listener.Code,
+                int expiresIn = await client.RequestAccessTokenAsync(_listener.State, _listener.Code,
                     _listener.RedirectUri);
+                _listener.Stop();
                 bool hasPremium = await client.RequestUserProductAsync(); // Ensure that the user has a premium account
+                System.Diagnostics.Debug.WriteLine(hasPremium);
                 if (!hasPremium)
                 {
                     MessageBox.Show("You must have a premium subscription for Zone Radio to work. Sorry!",
@@ -63,7 +112,9 @@ namespace Zone_Radio
                     Close(); // User cannot use the app without premium, so exit
                 }
 
-                // Update ui
+                // Update ui and start refresh timer
+                InitializeRefreshTimer(expiresIn);
+                InitializeUiTimer(expiresIn);
                 btnConnect.Enabled = false;
                 lblConnectionStatus.Text = "Connected to Spotify API.";
             }
@@ -77,7 +128,7 @@ namespace Zone_Radio
             }
         }
 
-        private async Task TryRefreshConnectionAsync()
+        private async Task<bool> TryRefreshConnectionAsync()
         {
             int maxRetries = 3;
             for (int i = 0; i < maxRetries; i++)
@@ -86,7 +137,7 @@ namespace Zone_Radio
                 {
                     await RefreshConnectionAsync();
                     lblConnectionStatus.Text = "Connected to Spotify API.";
-                    return; // Exit if successful
+                    return true; // Exit if successful
                 }
                 catch
                 {
@@ -96,6 +147,7 @@ namespace Zone_Radio
 
             lblConnectionStatus.Text = "Failed to refresh Spotify API connection.";
             btnConnect.Enabled = true; // Allow user to try getting new connection
+            return false; // Unsuccessful
         }
 
         private async Task RefreshConnectionAsync()

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Web;
 
 namespace Zone_Radio.Http
@@ -22,13 +23,13 @@ namespace Zone_Radio.Http
 
         public async Task RequestAuthorizationAsync(string redirectUri)
         {
-            _authorizationResponse.state = Guid.NewGuid().ToString();
+            _authorizationResponse.State = Guid.NewGuid().ToString();
             var query = HttpUtility.ParseQueryString(String.Empty);
             query["response_type"] = "code";
             query["client_id"] = _clientId;
             query["scope"] = "user-read-playback-state user-modify-playback-state user-read-private user-read-email";
             query["redirect_uri"] = redirectUri;
-            query["state"] = _authorizationResponse.state;
+            query["state"] = _authorizationResponse.State;
 
             string url = "https://accounts.spotify.com/authorize?" + query;
 
@@ -38,18 +39,18 @@ namespace Zone_Radio.Http
             _ = await client.GetAsync(url);
         }
 
-        public async Task RequestAccessTokenAsync(string state, string code, string redirectUri)
+        public async Task<int> RequestAccessTokenAsync(string state, string code, string redirectUri)
         {
-            if (state != _authorizationResponse.state)
+            if (state != _authorizationResponse.State)
             {
-                throw new InvalidOperationException($"State mismatch; expected {_authorizationResponse.state}. Got {state}");
+                throw new InvalidOperationException($"State mismatch; expected {_authorizationResponse.State}. Got {state}");
             }
 
-            _authorizationResponse.code = code;
+            _authorizationResponse.Code = code;
             var body = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "grant_type", "authorization_code" },
-                { "code", _authorizationResponse.code },
+                { "code", _authorizationResponse.Code },
                 { "redirect_uri", redirectUri }
             });
 
@@ -59,7 +60,11 @@ namespace Zone_Radio.Http
             client.DefaultRequestHeaders.Add("Authorization", $"Basic {Convert.ToBase64String(authString)}");
 
             var resp = await client.PostAsync("https://accounts.spotify.com/api/token", body);
-            _accessToken = JsonSerializer.Deserialize<TokenResponse>(await resp.Content.ReadAsStreamAsync());
+            System.Diagnostics.Debug.WriteLine(await resp.Content.ReadAsStringAsync());
+            _accessToken = JsonSerializer.Deserialize<TokenResponse>(await resp.Content.ReadAsStringAsync());
+
+            if (_accessToken == null) throw new NullReferenceException("Failed to fetch access token.");
+            return _accessToken.expires_in;
         }
 
         public async Task RequestRefreshTokenAsync()
@@ -75,7 +80,7 @@ namespace Zone_Radio.Http
                 $"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes(_clientId))}");
 
             var resp = await client.PostAsync("https://accounts.spotify.com/api/token", body);
-            _accessToken = JsonSerializer.Deserialize<TokenResponse>(await resp.Content.ReadAsStreamAsync());
+            _accessToken = JsonSerializer.Deserialize<TokenResponse>(await resp.Content.ReadAsStringAsync());
         }
 
         private async Task<bool> RequestDevicePlaybackStateAsync()
@@ -84,10 +89,10 @@ namespace Zone_Radio.Http
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken.access_token}");
 
             var resp = await client.GetAsync("https://api.spotify.com/v1/me/player");
-            var playbackState = JsonSerializer.Deserialize<UserDetails>(await resp.Content.ReadAsStreamAsync());
-            if (playbackState == null) throw new NullReferenceException("Failed to fetch playback state.");
+            var playbackState = JsonSerializer.Deserialize<PlaybackState>(await resp.Content.ReadAsStringAsync());
 
-            return playbackState.is_playing;
+            if (playbackState == null) throw new NullReferenceException("Failed to fetch playback state.");
+            return playbackState.IsPlaying;
         }
 
         public async Task<bool> RequestUserProductAsync()
@@ -96,10 +101,10 @@ namespace Zone_Radio.Http
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken.access_token}");
 
             var resp = await client.GetAsync("https://api.spotify.com/v1/me");
-            var hasPremium = JsonSerializer.Deserialize<UserDetails>(await resp.Content.ReadAsStreamAsync());
-            if (hasPremium == null) throw new NullReferenceException("Failed to fetch user data.");
+            var hasPremium = JsonSerializer.Deserialize<ProductState>(await resp.Content.ReadAsStringAsync());
 
-            return hasPremium.product == "premium";
+            if (hasPremium == null) throw new NullReferenceException("Failed to fetch user data.");
+            return hasPremium.Product == "premium";
         }
 
         public async Task TogglePlaybackAsync()
@@ -124,23 +129,27 @@ namespace Zone_Radio.Http
 
         private class TokenResponse // JSON response for access token
         {
-            public string access_token { get; set; }
-            public string token_type { get; set; }
-            public int expires_in { get; set; }
-            public string refresh_token { get; set; }
-            public string scope { get; set; }
+            public string access_token { get; init; }
+            public string token_type { get; init; }
+            public int expires_in { get; init; }
+            public string refresh_token { get; init; }
+            public string scope { get; init; }
         }
 
         private class AuthorizationResponse // JSON response for authorization code
         {
-            public string code { get; set; }
-            public string state { get; set; }
+            [JsonPropertyName("code")] public string Code { get; set; }
+            [JsonPropertyName("state")] public string State { get; set; }
         }
 
-        private class UserDetails // JSON response for user profile request
+        private class PlaybackState // JSON response for user profile request
         {
-            public bool is_playing { get; }
-            public string product { get; }
+            [JsonPropertyName("is_playing")] public bool IsPlaying { get; init; }
+        }
+
+        private class ProductState // JSON response for user profile request
+        {
+            [JsonPropertyName("product")] public string Product { get; init; }
         }
     }
 }
